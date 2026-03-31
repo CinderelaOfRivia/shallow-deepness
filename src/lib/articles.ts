@@ -34,10 +34,7 @@ export const getAllArticles = cache(async (): Promise<Article[]> => {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("articles")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const { data, error } = await supabase.from("articles").select("*").order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data satisfies Article[];
@@ -49,11 +46,7 @@ export const getArticleBySlug = cache(async (slug: string): Promise<Article | nu
   }
 
   const supabase = getSupabasePublic();
-  const { data, error } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+  const { data, error } = await supabase.from("articles").select("*").eq("slug", slug).maybeSingle();
 
   if (error) throw new Error(error.message);
   return (data as Article | null) ?? null;
@@ -65,10 +58,7 @@ export const getIdeas = cache(async (): Promise<Idea[]> => {
   }
 
   const supabase = getSupabasePublic();
-  const { data, error } = await supabase
-    .from("idea_bank")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const { data, error } = await supabase.from("idea_bank").select("*").order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data satisfies Idea[];
@@ -80,10 +70,7 @@ export const getAllIdeas = cache(async (): Promise<Idea[]> => {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("idea_bank")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const { data, error } = await supabase.from("idea_bank").select("*").order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data satisfies Idea[];

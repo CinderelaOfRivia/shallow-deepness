@@ -38,6 +38,20 @@ create table if not exists public.idea_bank (
 create index if not exists idea_bank_status_idx on public.idea_bank(status);
 create index if not exists idea_bank_created_at_idx on public.idea_bank(created_at desc);
 
+create table if not exists public.article_ai_runs (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid references public.articles(id) on delete set null,
+  workflow text not null check (workflow in ('feedback', 'steelman', 'editorial')),
+  intensity text not null check (intensity in ('default', 'heavy')),
+  model_name text not null,
+  source_payload jsonb not null,
+  output_payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists article_ai_runs_article_id_idx on public.article_ai_runs(article_id);
+create index if not exists article_ai_runs_created_at_idx on public.article_ai_runs(created_at desc);
+
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -60,6 +74,7 @@ for each row execute function public.touch_updated_at();
 
 alter table public.articles enable row level security;
 alter table public.idea_bank enable row level security;
+alter table public.article_ai_runs enable row level security;
 
 drop policy if exists "Public can read published articles" on public.articles;
 create policy "Public can read published articles"
@@ -74,3 +89,4 @@ for select
 using (true);
 
 -- The admin studio writes through server actions using the service role key.
+-- No public policy for article_ai_runs on purpose.
