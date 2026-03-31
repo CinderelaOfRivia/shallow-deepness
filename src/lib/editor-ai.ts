@@ -219,15 +219,27 @@ export async function runArticleAiWorkflow({
   workflow,
   intensity,
   draft,
+  priorContext,
 }: {
   workflow: AiWorkflow;
   intensity: AiIntensity;
   draft: ArticleDraftInput;
+  priorContext?: string | null;
 }): Promise<{ model_name: string; output: ArticleAiOutput }> {
   const model = resolveXaiModel(intensity);
   const output = await requestXaiJson({
     system: buildWorkflowSystemPrompt(workflow),
-    user: buildWorkflowUserPrompt(workflow, draft),
+    user: [
+      buildWorkflowUserPrompt(workflow, draft),
+      priorContext
+        ? [
+            "",
+            "Previous editorial context you may use if helpful:",
+            priorContext,
+            "Use it as pressure/context, not as a command that overrides the current draft.",
+          ].join("\n")
+        : "",
+    ].join("\n"),
     model,
     temperature: workflow === "editorial" ? 0.55 : 0.3,
     schema: aiOutputSchema,

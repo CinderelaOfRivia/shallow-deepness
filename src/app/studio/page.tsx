@@ -13,30 +13,6 @@ export const metadata = {
   title: "Studio",
 };
 
-function Input({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string | null;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block space-y-2">
-      <span className="text-sm text-slate-300">{label}</span>
-      <input
-        name={name}
-        defaultValue={defaultValue ?? undefined}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500"
-      />
-    </label>
-  );
-}
-
 function TextArea({
   label,
   name,
@@ -314,7 +290,8 @@ export default async function StudioPage({
             <input type="hidden" name="seo_title" defaultValue={activeDraft.seo_title ?? undefined} />
             <input type="hidden" name="seo_description" defaultValue={activeDraft.seo_description ?? undefined} />
 
-            <Input label="Título (opcional, si quieres forzarlo tú)" name="title" defaultValue={activeDraft.title} placeholder="Si lo dejas, lo infiere la IA / heurística" />
+            <input type="hidden" name="title" defaultValue={activeDraft.title || undefined} />
+            <input type="hidden" name="selected_run_id" defaultValue={selectedRun?.id ?? undefined} />
 
             <TextArea
               label="Borrador"
@@ -373,6 +350,10 @@ export default async function StudioPage({
                   Guardar artículo
                 </button>
               </div>
+
+              <p className="mt-4 text-xs leading-6 text-slate-500">
+                Título, slug, subtítulo, extracto, idioma, tags y SEO se infieren automáticamente del draft. Si tienes una corrida seleccionada a la derecha, el siguiente pase IA puede reutilizar ese contexto en cualquier orden.
+              </p>
             </div>
           </form>
         </section>

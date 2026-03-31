@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminAuthCookie, isAdminAuthenticated, setAdminAuthCookie } from "@/lib/admin-auth";
-import { createAiRun } from "@/lib/ai-runs";
+import { createAiRun, getAiRunById } from "@/lib/ai-runs";
 import { hasXaiEnv, inferArticleMetadata, runArticleAiWorkflow } from "@/lib/editor-ai";
 import { getSupabaseAdmin, hasSupabaseAdminEnv } from "@/lib/supabase";
 import type { AiIntensity, AiWorkflow, ArticleDraftInput, ArticleStatus } from "@/lib/types";
@@ -163,6 +163,7 @@ async function runAiAction(workflow: AiWorkflow, formData: FormData) {
 
   const baseDraft = readDraftFromFormData(formData);
   const intensity = (String(formData.get("ai_intensity") ?? "default") as AiIntensity) || "default";
+  const selectedRunId = String(formData.get("selected_run_id") ?? "").trim() || null;
 
   if (!hasSupabaseAdminEnv()) {
     redirect(buildStudioHref({ article: baseDraft.slug || null, error: "supabase-missing" }));
@@ -175,9 +176,25 @@ async function runAiAction(workflow: AiWorkflow, formData: FormData) {
   const draft = await enrichDraftMetadata(baseDraft, intensity);
   ensureDraftCanRunAi(draft);
 
+  const priorRun = selectedRunId ? await getAiRunById(selectedRunId) : null;
+  const priorContext = priorRun
+    ? JSON.stringify(
+        {
+          workflow: priorRun.workflow,
+          summary: priorRun.output_payload.summary,
+          preserve: priorRun.output_payload.preserve,
+          tensions: priorRun.output_payload.tensions,
+          action_items: priorRun.output_payload.action_items,
+          counterpoints: priorRun.output_payload.counterpoints,
+        },
+        null,
+        2,
+      )
+    : null;
+
   let runId: string;
   try {
-    const result = await runArticleAiWorkflow({ workflow, intensity, draft });
+    const result = await runArticleAiWorkflow({ workflow, intensity, draft, priorContext });
     runId = await createAiRun({
       articleId: draft.id,
       workflow,
