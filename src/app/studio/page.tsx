@@ -295,14 +295,14 @@ export default async function StudioPage({
       <ErrorNotice code={params.error} />
       {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <section className="glass-panel space-y-6 rounded-[2rem] p-8">
+      <div className="grid gap-8 xl:grid-cols-[minmax(320px,0.62fr)_minmax(0,1.18fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(340px,0.58fr)_minmax(0,1.28fr)_minmax(0,1fr)]">
+        <section className="glass-panel h-fit space-y-6 rounded-[2rem] p-6 xl:sticky xl:top-24">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
               <p className="section-eyebrow">Draft-first</p>
-              <h2 className="text-2xl font-semibold text-white">Pega texto. Lo demás se infiere.</h2>
+              <h2 className="text-2xl font-semibold text-white">Input mínimo</h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-400">
-                Título, excerpt, language, tags, SEO y demás se generan automáticamente al guardar o correr un pase IA. Si ya estás editando un artículo publicado, puedes seguirlo corrigiendo desde aquí sin pelearte con veinte campos irrelevantes.
+                Este panel solo existe para pegar el draft, poner límites de voz y disparar corridas. El centro y la derecha son donde realmente comparas estructura y feedback.
               </p>
             </div>
             <Link href="/studio" className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
@@ -330,7 +330,7 @@ export default async function StudioPage({
               label="Borrador"
               name="body_md"
               defaultValue={activeDraft.body_md}
-              rows={20}
+              rows={12}
               placeholder="Pega aquí el primer draft crudo. Sin ceremonias."
             />
 
@@ -391,11 +391,11 @@ export default async function StudioPage({
           </form>
         </section>
 
-        <section className="space-y-8">
-          <div className="grid gap-8 2xl:grid-cols-2">
-            <DraftPreview draft={activeDraft} />
+        <section className="xl:col-span-2 grid gap-8 xl:grid-cols-[minmax(0,1.18fr)_minmax(0,1fr)] xl:items-start">
+          <DraftPreview draft={activeDraft} />
 
-            <div className="glass-panel rounded-[2rem] p-8">
+          <div className="space-y-8">
+            <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
               <div className="space-y-2">
                 <p className="section-eyebrow">Corrida seleccionada</p>
                 <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
@@ -404,10 +404,9 @@ export default async function StudioPage({
                 <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
               </div>
             </div>
-          </div>
 
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
+            <div className="glass-panel rounded-[2rem] p-8">
+              <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="section-eyebrow">Historial</p>
                 <h2 className="text-2xl font-semibold text-white">Últimas corridas IA</h2>
@@ -441,39 +440,40 @@ export default async function StudioPage({
             </div>
           </div>
 
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="section-eyebrow">Archivo editable</p>
-                <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
-              </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
-            </div>
-            <div className="mt-6 space-y-3">
-              {articles.map((article) => (
-                <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-medium text-white">{article.title}</p>
-                      <p className="text-sm text-slate-400">/{article.slug}</p>
-                    </div>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                      {article.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
-                      Editar
-                    </Link>
-                    {article.status === "published" ? (
-                      <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
-                        Ver publicado
-                      </Link>
-                    ) : null}
-                  </div>
+            <div className="glass-panel rounded-[2rem] p-8">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="section-eyebrow">Archivo editable</p>
+                  <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
                 </div>
-              ))}
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
+              </div>
+              <div className="mt-6 space-y-3">
+                {articles.map((article) => (
+                  <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-white">{article.title}</p>
+                        <p className="text-sm text-slate-400">/{article.slug}</p>
+                      </div>
+                      <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                        {article.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                      <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
+                        Editar
+                      </Link>
+                      {article.status === "published" ? (
+                        <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
+                          Ver publicado
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
