@@ -1,10 +1,27 @@
 import { z } from "zod";
-import type { AiIntensity, AiWorkflow, ArticleAiOutput, ArticleDraftInput, InferredArticleMetadata } from "@/lib/types";
+import type {
+  AiIntensity,
+  AiWorkflow,
+  ArticleAiOutput,
+  ArticleAiRun,
+  ArticleDraftInput,
+  EditorChatAnswer,
+  InferredArticleMetadata,
+} from "@/lib/types";
 
 const XAI_API_URL = process.env.XAI_API_URL ?? "https://api.x.ai/v1/chat/completions";
 const XAI_API_KEY = process.env.XAI_API_KEY;
 const DEFAULT_MODEL = process.env.XAI_MODEL_DEFAULT ?? "grok-4-1-fast-reasoning";
 const HEAVY_MODEL = process.env.XAI_MODEL_HEAVY ?? "grok-4.20-0309-reasoning";
+
+const articleSuggestionSchema = z.object({
+  title: z.string().min(1).max(220).optional(),
+  subtitle: z.string().max(240).nullable().optional(),
+  excerpt: z.string().min(1).max(1200).optional(),
+  body_md: z.string().min(1).max(60000).optional(),
+  seo_title: z.string().max(220).nullable().optional(),
+  seo_description: z.string().max(320).nullable().optional(),
+});
 
 const aiOutputSchema = z.object({
   headline: z.string().min(1).max(160),
@@ -15,16 +32,7 @@ const aiOutputSchema = z.object({
   action_items: z.array(z.string().min(1).max(300)).max(8),
   counterpoints: z.array(z.string().min(1).max(300)).max(8),
   confidence_note: z.string().max(300).nullable(),
-  suggested_article: z
-    .object({
-      title: z.string().min(1).max(220).optional(),
-      subtitle: z.string().max(240).nullable().optional(),
-      excerpt: z.string().min(1).max(1200).optional(),
-      body_md: z.string().min(1).max(60000).optional(),
-      seo_title: z.string().max(220).nullable().optional(),
-      seo_description: z.string().max(320).nullable().optional(),
-    })
-    .nullable(),
+  suggested_article: articleSuggestionSchema.nullable(),
 });
 
 const inferredMetadataSchema = z.object({
@@ -35,6 +43,12 @@ const inferredMetadataSchema = z.object({
   tags: z.array(z.string().min(1).max(40)).max(6),
   seo_title: z.string().max(220).nullable(),
   seo_description: z.string().max(320).nullable(),
+});
+
+const editorChatAnswerSchema = z.object({
+  answer: z.string().min(1).max(4000),
+  suggested_changes: z.array(z.string().min(1).max(300)).max(8),
+  optional_revision: articleSuggestionSchema.nullable(),
 });
 
 type ChatMessage = {
@@ -324,4 +338,88 @@ export async function inferArticleMetadata(draft: ArticleDraftInput, intensity: 
   } catch {
     return buildFallbackMetadata(draft);
   }
+}
+
+export async function reviseDraftWithInstruction(params: {
+  draft: ArticleDraftInput;
+  run: ArticleAiRun;
+  instruction: string;
+  intensity?: AiIntensity;
+}): Promise<Partial<ArticleDraftInput>> {
+  const model = resolveXaiModel(params.intensity ?? "default");
+
+  return requestXaiJson({
+    system: [
+      "You are a precise editorial reviser inside Shallow Deepness.",
+      "Revise the current draft using a selected AI run plus a fresh human instruction.",
+      "Preserve voice, edge, and weird but reasonable turns.",
+      "Return only JSON.",
+    ].join("\n"),
+    user: [
+      "Current draft:",
+      JSON.stringify(params.draft, null, 2),
+      "",
+      "Selected run context:",
+      JSON.stringify(params.run, null, 2),
+      "",
+      "Human instruction:",
+      params.instruction,
+      "",
+      "Return JSON with any subset of these fields you want to change:",
+      JSON.stringify({
+        title: "optional",
+        subtitle: "optional or null",
+        excerpt: "optional",
+        body_md: "optional",
+        seo_title: "optional or null",
+        seo_description: "optional or null",
+      }, null, 2),
+    ].join("\n"),
+    model,
+    temperature: 0.35,
+    schema: articleSuggestionSchema,
+  });
+}
+
+export async function askEditorQuestion(params: {
+  draft: ArticleDraftInput;
+  run: ArticleAiRun | null;
+  question: string;
+  intensity?: AiIntensity;
+}): Promise<EditorChatAnswer> {
+  const model = resolveXaiModel(params.intensity ?? "default");
+
+  return requestXaiJson({
+    system: [
+      "You are Grok acting as a sharp editorial partner for Shallow Deepness.",
+      "Answer like a useful editor: direct, specific, not corporate.",
+      "If the user asks whether a paragraph should be more direct or metaphorical, answer concretely and justify it.",
+      "If a small revision would help, include it in optional_revision. Otherwise keep optional_revision null.",
+      "Return only JSON.",
+    ].join("\n"),
+    user: [
+      "Current draft:",
+      JSON.stringify(params.draft, null, 2),
+      params.run ? ["", "Selected editorial context:", JSON.stringify(params.run, null, 2)].join("\n") : "",
+      "",
+      "User question:",
+      params.question,
+      "",
+      "Return JSON with shape:",
+      JSON.stringify(
+        {
+          answer: "editorial answer",
+          suggested_changes: ["specific suggestions"],
+          optional_revision: {
+            body_md: "optional targeted rewrite",
+          },
+        },
+        null,
+        2,
+      ),
+    ].join("\n"),
+    model,
+    temperature: 0.45,
+    schema: editorChatAnswerSchema,
+  });
 }

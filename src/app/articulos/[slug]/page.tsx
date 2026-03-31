@@ -76,6 +76,10 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
         </header>
 
         <Markdown source={article.body_md} />
+
+        <footer className="mt-12 border-t border-white/10 pt-6 text-sm leading-7 text-slate-400">
+          Revisado y afinado con apoyo editorial de Grok dentro del pipeline de Shallow Deepness.
+        </footer>
       </article>
     </div>
   );

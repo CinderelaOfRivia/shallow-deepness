@@ -2,6 +2,7 @@ export type ArticleLanguage = "es" | "en";
 export type ArticleStatus = "draft" | "published";
 export type AiIntensity = "default" | "heavy";
 export type AiWorkflow = "feedback" | "steelman" | "editorial";
+export type EditorChatRole = "user" | "assistant";
 
 export interface Article {
   id: string;
@@ -80,4 +81,29 @@ export interface InferredArticleMetadata {
   tags: string[];
   seo_title: string | null;
   seo_description: string | null;
+}
+
+export interface ArticleDraftVersion {
+  id: string;
+  article_id: string | null;
+  source_run_id: string | null;
+  label: string;
+  snapshot: ArticleDraftInput;
+  created_at: string;
+}
+
+export interface ArticleEditorMessage {
+  id: string;
+  article_id: string | null;
+  source_run_id: string | null;
+  role: EditorChatRole;
+  content: string;
+  draft_snapshot: ArticleDraftInput | null;
+  created_at: string;
+}
+
+export interface EditorChatAnswer {
+  answer: string;
+  suggested_changes: string[];
+  optional_revision: Partial<ArticleAiSuggestion> | null;
 }
