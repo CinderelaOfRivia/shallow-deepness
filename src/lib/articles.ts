@@ -73,3 +73,18 @@ export const getIdeas = cache(async (): Promise<Idea[]> => {
   if (error) throw new Error(error.message);
   return data satisfies Idea[];
 });
+
+export const getAllIdeas = cache(async (): Promise<Idea[]> => {
+  if (!hasSupabaseAdminEnv()) {
+    return fallbackIdeas;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("idea_bank")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data satisfies Idea[];
+});

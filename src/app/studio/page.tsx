@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createIdeaAction, logoutAction, upsertArticleAction } from "@/app/studio/actions";
-import { getAllArticles, getIdeas } from "@/lib/articles";
+import { getAllArticles, getAllIdeas } from "@/lib/articles";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { hasSupabaseAdminEnv } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
@@ -86,7 +86,7 @@ export default async function StudioPage({
   if (!isAdmin) redirect("/studio/login");
 
   const params = await searchParams;
-  const [articles, ideas] = await Promise.all([getAllArticles(), getIdeas()]);
+  const [articles, ideas] = await Promise.all([getAllArticles(), getAllIdeas()]);
   const latestDraft = articles.find((article) => article.status === "draft") ?? null;
   const selectedArticle =
     articles.find((article) => article.slug === params.article) ?? latestDraft ?? articles[0] ?? null;

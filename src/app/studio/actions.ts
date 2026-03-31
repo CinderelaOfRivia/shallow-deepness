@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminAuthCookie, isAdminAuthenticated, setAdminAuthCookie } from "@/lib/admin-auth";
-import { getSupabaseAdmin, hasSupabaseServerEnv } from "@/lib/supabase";
+import { getSupabaseAdmin, hasSupabaseAdminEnv } from "@/lib/supabase";
 import { slugify } from "@/lib/utils";
 
 function requireSupabase() {
-  if (!hasSupabaseServerEnv()) {
+  if (!hasSupabaseAdminEnv()) {
     throw new Error("Supabase no está configurado todavía. Usa .env.example y ejecuta supabase/schema.sql.");
   }
 
