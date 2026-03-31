@@ -1,6 +1,6 @@
 # shallow-deepness
 
-Anonymous publishing site for essays, articles, and an idea backlog.
+Anonymous publishing site for essays and articles.
 
 ## Stack
 - Next.js App Router
@@ -10,12 +10,12 @@ Anonymous publishing site for essays, articles, and an idea backlog.
 - Vercel-ready deployment
 
 ## What is already implemented
-- Public homepage with featured article, recent articles, and idea bank
+- Public homepage with featured article and recent articles
 - Article listing page
 - Individual article pages with markdown rendering and metadata
 - Private editorial studio at `/studio`
 - xAI-powered editorial lab inside the studio (feedback, steelman, editorial)
-- Supabase SQL schema for articles, topic backlog (`idea_bank`), and stored AI runs (`article_ai_runs`)
+- Supabase SQL schema for articles and stored AI runs (`article_ai_runs`)
 - Safe local fallback content when Supabase is not configured
 
 ## Environment
@@ -68,4 +68,4 @@ If `XAI_API_KEY` is missing, the studio still loads but the editorial lab stays 
 - Add article series and better tag pages
 - Add draft preview links
 - Add article delete/archive controls with explicit confirmation
-- Connect the idea bank to the writing pipeline more explicitly
+- Add article series / sequencing once the archive has enough density

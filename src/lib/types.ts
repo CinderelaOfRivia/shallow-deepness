@@ -1,6 +1,5 @@
 export type ArticleLanguage = "es" | "en";
 export type ArticleStatus = "draft" | "published";
-export type IdeaStatus = "seed" | "exploring" | "drafting" | "published" | "paused";
 export type AiIntensity = "default" | "heavy";
 export type AiWorkflow = "feedback" | "steelman" | "editorial";
 
@@ -21,18 +20,6 @@ export interface Article {
   updated_at: string;
   seo_title: string | null;
   seo_description: string | null;
-}
-
-export interface Idea {
-  id: string;
-  title: string;
-  angle: string;
-  why_now: string;
-  status: IdeaStatus;
-  notes: string | null;
-  source_article_slug: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ArticleDraftInput {
@@ -83,4 +70,14 @@ export interface ArticleAiRun {
   source_payload: ArticleDraftInput;
   output_payload: ArticleAiOutput;
   created_at: string;
+}
+
+export interface InferredArticleMetadata {
+  title: string;
+  subtitle: string | null;
+  excerpt: string;
+  language: ArticleLanguage;
+  tags: string[];
+  seo_title: string | null;
+  seo_description: string | null;
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiIntensity, AiWorkflow, ArticleAiOutput, ArticleDraftInput } from "@/lib/types";
+import type { AiIntensity, AiWorkflow, ArticleAiOutput, ArticleDraftInput, InferredArticleMetadata } from "@/lib/types";
 
 const XAI_API_URL = process.env.XAI_API_URL ?? "https://api.x.ai/v1/chat/completions";
 const XAI_API_KEY = process.env.XAI_API_KEY;
@@ -27,6 +27,16 @@ const aiOutputSchema = z.object({
     .nullable(),
 });
 
+const inferredMetadataSchema = z.object({
+  title: z.string().min(1).max(220),
+  subtitle: z.string().max(240).nullable(),
+  excerpt: z.string().min(1).max(1200),
+  language: z.enum(["es", "en"]),
+  tags: z.array(z.string().min(1).max(40)).max(6),
+  seo_title: z.string().max(220).nullable(),
+  seo_description: z.string().max(320).nullable(),
+});
+
 type ChatMessage = {
   role: "system" | "user";
   content: string;
@@ -51,7 +61,7 @@ function getWorkflowLabel(workflow: AiWorkflow) {
   }
 }
 
-function buildSystemPrompt(workflow: AiWorkflow) {
+function buildWorkflowSystemPrompt(workflow: AiWorkflow) {
   const shared = [
     "You are the editorial intelligence inside an anonymous philosophy journal called Shallow Deepness.",
     "Your job is to improve writing without flattening the author's strange angles, sharpness, or reasonable tangents.",
@@ -86,7 +96,7 @@ function buildSystemPrompt(workflow: AiWorkflow) {
   return shared.join("\n");
 }
 
-function buildUserPrompt(workflow: AiWorkflow, draft: ArticleDraftInput) {
+function buildWorkflowUserPrompt(workflow: AiWorkflow, draft: ArticleDraftInput) {
   const schemaDescription = {
     headline: "short title for this AI pass",
     summary: "dense overview of the diagnosis or rewrite",
@@ -153,23 +163,26 @@ function extractJsonBlock(raw: string) {
   return raw.trim();
 }
 
-export async function runArticleAiWorkflow({
-  workflow,
-  intensity,
-  draft,
+async function requestXaiJson<T>({
+  system,
+  user,
+  model,
+  temperature,
+  schema,
 }: {
-  workflow: AiWorkflow;
-  intensity: AiIntensity;
-  draft: ArticleDraftInput;
-}): Promise<{ model_name: string; output: ArticleAiOutput }> {
+  system: string;
+  user: string;
+  model: string;
+  temperature: number;
+  schema: z.ZodType<T>;
+}): Promise<T> {
   if (!XAI_API_KEY) {
     throw new Error("Falta XAI_API_KEY en el entorno.");
   }
 
-  const model = resolveXaiModel(intensity);
   const messages: ChatMessage[] = [
-    { role: "system", content: buildSystemPrompt(workflow) },
-    { role: "user", content: buildUserPrompt(workflow, draft) },
+    { role: "system", content: system },
+    { role: "user", content: user },
   ];
 
   const response = await fetch(XAI_API_URL, {
@@ -178,11 +191,7 @@ export async function runArticleAiWorkflow({
       "Content-Type": "application/json",
       Authorization: `Bearer ${XAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model,
-      temperature: workflow === "editorial" ? 0.55 : 0.3,
-      messages,
-    }),
+    body: JSON.stringify({ model, temperature, messages }),
     signal: AbortSignal.timeout(90000),
     cache: "no-store",
   });
@@ -203,6 +212,104 @@ export async function runArticleAiWorkflow({
     throw new Error("xAI devolvió una respuesta no parseable como JSON.");
   }
 
-  const output = aiOutputSchema.parse(parsed);
+  return schema.parse(parsed);
+}
+
+export async function runArticleAiWorkflow({
+  workflow,
+  intensity,
+  draft,
+}: {
+  workflow: AiWorkflow;
+  intensity: AiIntensity;
+  draft: ArticleDraftInput;
+}): Promise<{ model_name: string; output: ArticleAiOutput }> {
+  const model = resolveXaiModel(intensity);
+  const output = await requestXaiJson({
+    system: buildWorkflowSystemPrompt(workflow),
+    user: buildWorkflowUserPrompt(workflow, draft),
+    model,
+    temperature: workflow === "editorial" ? 0.55 : 0.3,
+    schema: aiOutputSchema,
+  });
+
   return { model_name: model, output };
+}
+
+function detectLanguageFromText(text: string): "es" | "en" {
+  const spanishSignals = /\b(el|la|los|las|una|uno|porque|pero|también|ideas|pensamiento|ensayo|como|para|qué|más|menos|sobre)\b/i;
+  return spanishSignals.test(text) ? "es" : "en";
+}
+
+function buildFallbackMetadata(draft: ArticleDraftInput): InferredArticleMetadata {
+  const cleanBody = draft.body_md.replace(/[#>*_`-]/g, " ").replace(/\s+/g, " ").trim();
+  const firstSentence = cleanBody.split(/[.!?]\s/).find(Boolean) ?? cleanBody;
+  const inferredTitle = draft.title.trim() || firstSentence.slice(0, 72) || "Untitled draft";
+  const excerpt = cleanBody.slice(0, 260) || inferredTitle;
+  const seoTitle = inferredTitle.slice(0, 220);
+  const seoDescription = excerpt.slice(0, 300);
+  const language = detectLanguageFromText(`${draft.title} ${draft.body_md}`);
+  const tagCandidates = inferredTitle
+    .toLowerCase()
+    .replace(/[^a-záéíóúñ0-9\s-]/gi, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 4)
+    .slice(0, 4);
+
+  return {
+    title: inferredTitle,
+    subtitle: draft.subtitle,
+    excerpt,
+    language,
+    tags: [...new Set(tagCandidates)],
+    seo_title: seoTitle,
+    seo_description: seoDescription,
+  };
+}
+
+export async function inferArticleMetadata(draft: ArticleDraftInput, intensity: AiIntensity = "default"): Promise<InferredArticleMetadata> {
+  if (!hasXaiEnv()) {
+    return buildFallbackMetadata(draft);
+  }
+
+  const model = resolveXaiModel(intensity);
+  try {
+    return await requestXaiJson({
+      system: [
+        "You extract publication metadata for an anonymous philosophy/culture journal.",
+        "Preserve the author's essence. Do not over-normalize weird but meaningful framing.",
+        "Infer missing metadata from the draft itself.",
+        "Return only valid JSON. No markdown fences.",
+      ].join("\n"),
+      user: [
+        "Return JSON with this exact shape:",
+        JSON.stringify(
+          {
+            title: "tight title",
+            subtitle: "optional subtitle or null",
+            excerpt: "120-260 character excerpt",
+            language: "es or en",
+            tags: ["up to 6 lowercase tags"],
+            seo_title: "optional seo title or null",
+            seo_description: "optional seo description or null",
+          },
+          null,
+          2,
+        ),
+        "",
+        "Draft:",
+        JSON.stringify(draft, null, 2),
+        "",
+        "Constraints:",
+        "- Use the author's actual voice, not generic SEO sludge.",
+        "- Tags should be sharp and sparse.",
+        "- Excerpt should feel like the piece, not marketing copy.",
+      ].join("\n"),
+      model,
+      temperature: 0.2,
+      schema: inferredMetadataSchema,
+    });
+  } catch {
+    return buildFallbackMetadata(draft);
+  }
 }

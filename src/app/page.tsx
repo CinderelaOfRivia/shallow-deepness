@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { ArticleCard } from "@/components/article-card";
 import { SectionHeading } from "@/components/section-heading";
-import { getIdeas, getPublishedArticles } from "@/lib/articles";
+import { getPublishedArticles } from "@/lib/articles";
 
 export default async function HomePage() {
   const articles = await getPublishedArticles();
-  const ideas = await getIdeas();
   const [featured, ...rest] = articles;
 
   return (
@@ -51,7 +50,7 @@ export default async function HomePage() {
             <div className="mt-5 space-y-4 text-sm leading-7 text-slate-300 sm:text-base">
               <p>La meta no es verse inteligente. Es dejar una idea lo bastante nítida como para que no se pudra en borrador eterno.</p>
               <p>Por eso el sitio se mueve despacio, respira raro y evita parecer una plantilla corporativa que leyó dos citas de Nietzsche y pidió un rebrand.</p>
-              <p>Si Supabase no está conectado, el sistema usa contenido local de ejemplo. Mejor honestidad atmosférica que infraestructura mitómana.</p>
+              <p>El estudio editorial detrás del archivo también existe para esto: tensionar el texto, no domesticarlo.</p>
             </div>
           </div>
         </div>
@@ -59,11 +58,7 @@ export default async function HomePage() {
 
       {featured ? (
         <section className="space-y-8">
-          <SectionHeading
-            eyebrow="Pieza central"
-            title={featured.title}
-            description={featured.excerpt}
-          />
+          <SectionHeading eyebrow="Pieza central" title={featured.title} description={featured.excerpt} />
           <ArticleCard article={featured} />
         </section>
       ) : null}
@@ -90,28 +85,20 @@ export default async function HomePage() {
       <section className="glass-panel rounded-[2rem] p-8 sm:p-10">
         <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr]">
           <SectionHeading
-            eyebrow="Banco de ideas"
-            title="Temas que todavía están mutando"
-            description="No todo debería publicarse hoy. Algunas ideas necesitan quedarse un rato en el sótano, tomando forma rara antes de pedir luz." 
+            eyebrow="Método"
+            title="Primero pensar, después afilar"
+            description="El studio no está hecho para publicar impulsos sin fricción. Está hecho para pegar un draft, someterlo a presión inteligente y devolverlo más preciso sin volverlo obediente."
           />
           <div className="grid gap-4">
-            {ideas.map((idea, index) => (
-              <article
-                key={idea.id}
-                className="rounded-[1.6rem] border border-white/8 bg-black/20 p-5 transition hover:border-violet-300/20 hover:bg-white/[0.04]"
-              >
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="mb-2 text-[11px] uppercase tracking-[0.32em] text-slate-500">Seed {String(index + 1).padStart(2, "0")}</p>
-                    <h3 className="text-xl font-semibold text-white">{idea.title}</h3>
-                  </div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-slate-300">
-                    {idea.status}
-                  </span>
-                </div>
-                <p className="text-sm leading-7 text-slate-300">{idea.angle}</p>
-                <p className="mt-3 text-sm leading-7 text-violet-100/85">{idea.why_now}</p>
-              </article>
+            {[
+              "Feedback para detectar estructura rota, saltos flojos y zonas borrosas.",
+              "Steelman para construir el mejor ataque posible contra la idea antes de que lo haga otro.",
+              "Editorial para pulir ritmo, filo y legibilidad sin licuar tu voz en plástico premium.",
+            ].map((line, index) => (
+              <div key={line} className="rounded-[1.6rem] border border-white/8 bg-black/20 p-5 transition hover:border-violet-300/20 hover:bg-white/[0.04]">
+                <p className="mb-3 text-[11px] uppercase tracking-[0.32em] text-slate-500">Paso {String(index + 1).padStart(2, "0")}</p>
+                <p className="text-sm leading-7 text-slate-300">{line}</p>
+              </div>
             ))}
           </div>
         </div>

@@ -1,4 +1,4 @@
-import type { Article, Idea } from "@/lib/types";
+import type { Article } from "@/lib/types";
 
 const now = new Date().toISOString();
 
@@ -35,19 +35,5 @@ The antidote is not isolation. It is a disciplined conscience: principles sturdy
     seo_title: "The Hive Mind Trap",
     seo_description:
       "An essay on consensus morality, tribalism, and the dangers of outsourcing conscience to the crowd.",
-  },
-];
-
-export const fallbackIdeas: Idea[] = [
-  {
-    id: "idea-1",
-    title: "Empathy without structure",
-    angle: "A piece about how compassion becomes dangerous when it is detached from reciprocity, prudence, and boundaries.",
-    why_now: "Because many moral arguments now skip straight to emotional validation and treat limits as cruelty by default.",
-    status: "seed",
-    notes: "Could become a follow-up to The Hive Mind Trap without sounding like a slogan in search of a theory.",
-    source_article_slug: "the-hive-mind-trap",
-    created_at: now,
-    updated_at: now,
   },
 ];

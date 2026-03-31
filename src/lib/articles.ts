@@ -1,7 +1,7 @@
 import { cache } from "react";
-import { fallbackArticles, fallbackIdeas } from "@/lib/fallback-content";
+import { fallbackArticles } from "@/lib/fallback-content";
 import { getSupabaseAdmin, getSupabasePublic, hasSupabaseAdminEnv, hasSupabasePublicEnv } from "@/lib/supabase";
-import type { Article, Idea } from "@/lib/types";
+import type { Article } from "@/lib/types";
 
 function sortArticles(items: Article[]) {
   return [...items].sort((a, b) => {
@@ -50,28 +50,4 @@ export const getArticleBySlug = cache(async (slug: string): Promise<Article | nu
 
   if (error) throw new Error(error.message);
   return (data as Article | null) ?? null;
-});
-
-export const getIdeas = cache(async (): Promise<Idea[]> => {
-  if (!hasSupabasePublicEnv()) {
-    return fallbackIdeas;
-  }
-
-  const supabase = getSupabasePublic();
-  const { data, error } = await supabase.from("idea_bank").select("*").order("updated_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return data satisfies Idea[];
-});
-
-export const getAllIdeas = cache(async (): Promise<Idea[]> => {
-  if (!hasSupabaseAdminEnv()) {
-    return fallbackIdeas;
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("idea_bank").select("*").order("updated_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return data satisfies Idea[];
 });

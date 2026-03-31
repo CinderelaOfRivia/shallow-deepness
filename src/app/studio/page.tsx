@@ -1,15 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  createIdeaAction,
-  logoutAction,
-  runEditorialAction,
-  runFeedbackAction,
-  runSteelmanAction,
-  upsertArticleAction,
-} from "@/app/studio/actions";
+import { logoutAction, runEditorialAction, runFeedbackAction, runSteelmanAction, upsertArticleAction } from "@/app/studio/actions";
 import { getAiRunById, getRecentAiRuns } from "@/lib/ai-runs";
-import { getAllArticles, getAllIdeas } from "@/lib/articles";
+import { getAllArticles } from "@/lib/articles";
 import { hasXaiEnv, resolveXaiModel } from "@/lib/editor-ai";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { hasSupabaseAdminEnv } from "@/lib/supabase";
@@ -24,13 +17,11 @@ function Input({
   label,
   name,
   defaultValue,
-  required,
   placeholder,
 }: {
   label: string;
   name: string;
   defaultValue?: string | null;
-  required?: boolean;
   placeholder?: string;
 }) {
   return (
@@ -39,7 +30,6 @@ function Input({
       <input
         name={name}
         defaultValue={defaultValue ?? undefined}
-        required={required}
         placeholder={placeholder}
         className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500"
       />
@@ -51,14 +41,12 @@ function TextArea({
   label,
   name,
   defaultValue,
-  required,
   rows = 6,
   placeholder,
 }: {
   label: string;
   name: string;
   defaultValue?: string | null;
-  required?: boolean;
   rows?: number;
   placeholder?: string;
 }) {
@@ -68,7 +56,6 @@ function TextArea({
       <textarea
         name={name}
         defaultValue={defaultValue ?? undefined}
-        required={required}
         rows={rows}
         placeholder={placeholder}
         className="w-full rounded-3xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500"
@@ -130,22 +117,19 @@ function articleToDraft(article: Article): ArticleDraftInput {
 function mergeDraftWithSuggestion(base: ArticleDraftInput, run: ArticleAiRun | null, applySuggestion: boolean) {
   if (!run) return base;
 
-  let draft = { ...base, ...run.source_payload };
+  const draft = { ...base, ...run.source_payload };
+  if (!applySuggestion || !run.output_payload.suggested_article) return draft;
 
-  if (applySuggestion && run.output_payload.suggested_article) {
-    draft = {
-      ...draft,
-      ...run.output_payload.suggested_article,
-      title: run.output_payload.suggested_article.title ?? draft.title,
-      subtitle: run.output_payload.suggested_article.subtitle ?? draft.subtitle,
-      excerpt: run.output_payload.suggested_article.excerpt ?? draft.excerpt,
-      body_md: run.output_payload.suggested_article.body_md ?? draft.body_md,
-      seo_title: run.output_payload.suggested_article.seo_title ?? draft.seo_title,
-      seo_description: run.output_payload.suggested_article.seo_description ?? draft.seo_description,
-    };
-  }
-
-  return draft;
+  return {
+    ...draft,
+    ...run.output_payload.suggested_article,
+    title: run.output_payload.suggested_article.title ?? draft.title,
+    subtitle: run.output_payload.suggested_article.subtitle ?? draft.subtitle,
+    excerpt: run.output_payload.suggested_article.excerpt ?? draft.excerpt,
+    body_md: run.output_payload.suggested_article.body_md ?? draft.body_md,
+    seo_title: run.output_payload.suggested_article.seo_title ?? draft.seo_title,
+    seo_description: run.output_payload.suggested_article.seo_description ?? draft.seo_description,
+  };
 }
 
 function buildStudioHref(params: { article?: string | null; run?: string | null; apply?: string | null }) {
@@ -161,7 +145,7 @@ function ErrorNotice({ code }: { code?: string }) {
 
   const messages: Record<string, string> = {
     "xai-missing": "Falta XAI_API_KEY en producción. Sin esa llave, el laboratorio editorial no puede correr.",
-    "supabase-missing": "Falta configuración admin de Supabase. El studio necesita persistencia real para guardar corridas IA.",
+    "supabase-missing": "Falta configuración admin de Supabase. El studio necesita persistencia real para guardar artículos y corridas IA.",
     "draft-too-thin": "El borrador está demasiado vacío o corto. Pega algo con más sustancia antes de pedirle cirugía a la IA.",
     "ai-failed": "La corrida con xAI falló. Revisa la API key, el modelo configurado y vuelve a intentar.",
   };
@@ -176,18 +160,13 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
   if (!selectedRun) {
     return (
       <div className="rounded-[1.6rem] border border-dashed border-white/10 bg-black/20 p-5 text-sm leading-7 text-slate-400">
-        Corre feedback, steelman o editorial desde el formulario principal. La IA analiza el texto actual del borrador, no una versión idealizada en tu cabeza. Trágico, sí. Útil también.
+        Corre feedback, steelman o editorial sobre el draft actual. Cada pasada queda guardada y puedes cargar la sugerencia de vuelta al borrador si te sirve.
       </div>
     );
   }
 
-  const suggestionHref = buildStudioHref({
-    article: selectedArticleSlug,
-    run: selectedRun.id,
-    apply: "1",
-  });
-
-  const hasSuggestion = Boolean(selectedRun.output_payload.suggested_article);
+  const suggestionHref = buildStudioHref({ article: selectedArticleSlug, run: selectedRun.id, apply: "1" });
+  const plainHref = buildStudioHref({ article: selectedArticleSlug, run: selectedRun.id });
 
   return (
     <div className="space-y-4">
@@ -198,7 +177,7 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
             <h3 className="mt-2 text-2xl font-semibold text-white">{selectedRun.output_payload.headline}</h3>
           </div>
           <div className="text-right text-xs uppercase tracking-[0.18em] text-slate-400">
-            <p>{selectedRun.intensity === "heavy" ? "heavy" : "default"}</p>
+            <p>{selectedRun.intensity}</p>
             <p className="mt-1">{selectedRun.model_name}</p>
             <p className="mt-1">{formatDate(selectedRun.created_at)}</p>
           </div>
@@ -206,18 +185,18 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
         <p className="mt-4 text-sm leading-7 text-slate-300">{selectedRun.output_payload.summary}</p>
       </div>
 
-      {hasSuggestion ? (
+      {selectedRun.output_payload.suggested_article ? (
         <div className="rounded-[1.6rem] border border-cyan-300/15 bg-cyan-300/5 p-5 text-sm leading-7 text-cyan-50">
           <p className="text-xs uppercase tracking-[0.26em] text-cyan-200/80">Aplicar propuesta</p>
           <p className="mt-3 text-cyan-50/90">
-            Si esta pasada te sirvió, puedes cargar la propuesta de la IA dentro del borrador actual. No publica nada ni guarda por ti; solo te deja el texto listo para que lo revises como adulto funcional.
+            Si esta pasada sí entendió el assignment, carga la sugerencia en el borrador. No publica nada. No guarda nada por detrás. Solo te la deja puesta para revisión humana.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link href={suggestionHref} className="rounded-full bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
-              Cargar sugerencia en el borrador
+              Cargar sugerencia
             </Link>
-            <Link href={buildStudioHref({ article: selectedArticleSlug, run: selectedRun.id })} className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-              Ver versión sin aplicar
+            <Link href={plainHref} className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
+              Ver sin aplicar
             </Link>
           </div>
         </div>
@@ -267,9 +246,8 @@ export default async function StudioPage({
   if (!isAdmin) redirect("/studio/login");
 
   const params = await searchParams;
-  const [articles, ideas, selectedRun] = await Promise.all([
+  const [articles, selectedRun] = await Promise.all([
     getAllArticles(),
-    getAllIdeas(),
     params.run ? getAiRunById(params.run) : Promise.resolve(null),
   ]);
 
@@ -288,7 +266,7 @@ export default async function StudioPage({
           <p className="section-eyebrow">Panel editorial</p>
           <h1 className="text-4xl font-semibold tracking-tight text-white">Studio de Shallow Deepness</h1>
           <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            Aquí puedes pegar un primer borrador y pasarlo por tres cuchillos distintos: feedback, steelman y editorial. La idea no es que la IA te reemplace; es que te empuje, te contradiga y luego te ayude a pulir sin castrarte el estilo.
+            La experiencia ahora es más simple: pega el draft, opcionalmente ajusta el título, agrega límites de voz si hace falta y corre feedback, steelman o editorial. El resto lo extrae el motor y tú decides qué aceptar.
           </p>
         </div>
         <form action={logoutAction}>
@@ -298,69 +276,62 @@ export default async function StudioPage({
         </form>
       </section>
 
-      {!supabaseReady ? (
-        <StudioNotice kind="warning">
-          Supabase admin no está configurado todavía. El studio necesita eso para guardar artículos y las corridas de IA.
-        </StudioNotice>
-      ) : null}
+      {!supabaseReady ? <StudioNotice kind="warning">Supabase admin no está configurado todavía.</StudioNotice> : null}
+      {!xaiReady ? <StudioNotice kind="warning">XAI_API_KEY todavía no existe en el entorno. El lab editorial sigue apagado hasta que pongas la llave.</StudioNotice> : null}
 
-      {!xaiReady ? (
-        <StudioNotice kind="warning">
-          XAI_API_KEY todavía no existe en el entorno. El formulario funciona, pero el laboratorio editorial IA seguirá muerto hasta que pongas la llave.
-        </StudioNotice>
-      ) : null}
-
-      {params.saved === "article" ? <StudioNotice kind="success">Artículo guardado. Ya quedó persistido y revalidado.</StudioNotice> : null}
-      {params.saved === "idea" ? <StudioNotice kind="success">Idea guardada. El banco de ideas ya se actualizó.</StudioNotice> : null}
-      {params.saved === "feedback" ? <StudioNotice kind="success">Feedback corrido. Ya quedó guardado en el historial editorial.</StudioNotice> : null}
-      {params.saved === "steelman" ? <StudioNotice kind="success">Steelman corrido. Ya tienes la versión más inteligente del ataque.</StudioNotice> : null}
-      {params.saved === "editorial" ? <StudioNotice kind="success">Editorial corrido. La propuesta ya quedó lista para revisar o cargar en el borrador.</StudioNotice> : null}
+      {params.saved === "article" ? <StudioNotice kind="success">Artículo guardado. Metadata y slug quedaron resueltos automáticamente.</StudioNotice> : null}
+      {params.saved === "feedback" ? <StudioNotice kind="success">Feedback corrido y guardado.</StudioNotice> : null}
+      {params.saved === "steelman" ? <StudioNotice kind="success">Steelman corrido y guardado.</StudioNotice> : null}
+      {params.saved === "editorial" ? <StudioNotice kind="success">Editorial corrido y guardado.</StudioNotice> : null}
 
       <ErrorNotice code={params.error} />
 
-      <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.12fr_0.88fr]">
         <section className="glass-panel space-y-6 rounded-[2rem] p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
-              <p className="section-eyebrow">Borrador</p>
-              <h2 className="text-2xl font-semibold text-white">Escribir, tensionar, afilar</h2>
+              <p className="section-eyebrow">Draft-first</p>
+              <h2 className="text-2xl font-semibold text-white">Pega texto. Lo demás se infiere.</h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-400">
-                Lo que analizan los motores IA es exactamente este formulario. Si editas algo y luego corres steelman, la corrida se hace sobre esa versión. Nada de fantasmas intermedios.
+                Título, excerpt, language, tags, SEO y demás se generan automáticamente al guardar o correr un pase IA. Si ya estás editando un artículo publicado, puedes seguirlo corrigiendo desde aquí sin pelearte con veinte campos irrelevantes.
               </p>
             </div>
             <Link href="/studio" className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-              Nuevo artículo
+              Nuevo draft
             </Link>
           </div>
 
           <form action={upsertArticleAction} className="space-y-5">
             <input type="hidden" name="id" defaultValue={activeDraft.id ?? undefined} />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Título" name="title" defaultValue={activeDraft.title} required placeholder="The hive mind trap" />
-              <Input label="Slug" name="slug" defaultValue={activeDraft.slug} placeholder="se genera si lo dejas vacío" />
-            </div>
-            <Input label="Subtítulo" name="subtitle" defaultValue={activeDraft.subtitle} />
-            <TextArea label="Extracto" name="excerpt" defaultValue={activeDraft.excerpt} required rows={3} />
-            <TextArea label="Cuerpo en markdown" name="body_md" defaultValue={activeDraft.body_md} required rows={18} placeholder="Pega aquí el primer draft crudo." />
+            <input type="hidden" name="slug" defaultValue={activeDraft.slug || undefined} />
+            <input type="hidden" name="subtitle" defaultValue={activeDraft.subtitle ?? undefined} />
+            <input type="hidden" name="excerpt" defaultValue={activeDraft.excerpt || undefined} />
+            <input type="hidden" name="language" defaultValue={activeDraft.language} />
+            <input type="hidden" name="cover_image_url" defaultValue={activeDraft.cover_image_url ?? undefined} />
+            <input type="hidden" name="tags" defaultValue={activeDraft.tags.join(", ") || undefined} />
+            <input type="hidden" name="featured" defaultValue={activeDraft.featured ? "on" : ""} />
+            <input type="hidden" name="published_at" defaultValue={activeDraft.published_at ?? undefined} />
+            <input type="hidden" name="seo_title" defaultValue={activeDraft.seo_title ?? undefined} />
+            <input type="hidden" name="seo_description" defaultValue={activeDraft.seo_description ?? undefined} />
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Tags separados por coma" name="tags" defaultValue={activeDraft.tags.join(", ")} placeholder="philosophy, culture, ethics" />
-              <Input label="Cover image URL" name="cover_image_url" defaultValue={activeDraft.cover_image_url} />
-            </div>
+            <Input label="Título (opcional, si quieres forzarlo tú)" name="title" defaultValue={activeDraft.title} placeholder="Si lo dejas, lo infiere la IA / heurística" />
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input label="SEO title" name="seo_title" defaultValue={activeDraft.seo_title} />
-              <Input label="SEO description" name="seo_description" defaultValue={activeDraft.seo_description} />
-            </div>
+            <TextArea
+              label="Borrador"
+              name="body_md"
+              defaultValue={activeDraft.body_md}
+              rows={20}
+              placeholder="Pega aquí el primer draft crudo. Sin ceremonias."
+            />
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="block space-y-2">
-                <span className="text-sm text-slate-300">Idioma</span>
-                <select name="language" defaultValue={activeDraft.language} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
+            <div className="grid gap-4 md:grid-cols-[0.7fr_0.3fr]">
+              <TextArea
+                label="Notas de voz / límites (opcional)"
+                name="voice_notes"
+                defaultValue={activeDraft.voice_notes}
+                rows={6}
+                placeholder="Ej: no me limpies demasiado, conserva mis tangentes si sostienen el argumento, no suenes corporate."
+              />
               <label className="block space-y-2">
                 <span className="text-sm text-slate-300">Estado</span>
                 <select name="status" defaultValue={activeDraft.status} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
@@ -368,29 +339,15 @@ export default async function StudioPage({
                   <option value="published">Published</option>
                 </select>
               </label>
-              <Input label="Published at (ISO opcional)" name="published_at" defaultValue={activeDraft.published_at} placeholder="2026-03-30T18:00:00.000Z" />
             </div>
-
-            <label className="flex items-center gap-3 text-sm text-slate-300">
-              <input type="checkbox" name="featured" defaultChecked={activeDraft.featured} className="size-4 rounded border-white/10 bg-slate-950/70" />
-              Marcar como destacado
-            </label>
-
-            <TextArea
-              label="Notas para IA (voz / esencia / límites)"
-              name="voice_notes"
-              defaultValue={activeDraft.voice_notes}
-              rows={5}
-              placeholder="Ej: conserva mi tono extraño, no limpies demasiado las tangentes si sirven, no suenes corporate, no me conviertas en un columnista domado."
-            />
 
             <div className="rounded-[1.6rem] border border-violet-300/15 bg-violet-300/5 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-violet-200/80">Laboratorio editorial IA</p>
-                  <h3 className="mt-2 text-xl font-semibold text-white">Tres motores, dos intensidades</h3>
+                  <h3 className="mt-2 text-xl font-semibold text-white">Tres cuchillos, dos intensidades</h3>
                   <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                    Default usa {resolveXaiModel("default")}. Heavy usa {resolveXaiModel("heavy")}. Feedback encuentra fallas. Steelman construye el ataque más inteligente. Editorial pule sin licuar la voz.
+                    Default usa {resolveXaiModel("default")}. Heavy usa {resolveXaiModel("heavy")}. Feedback encuentra fallas, steelman construye el mejor ataque y editorial pule sin destruir la firma mental del texto.
                   </p>
                 </div>
                 <label className="block space-y-2">
@@ -404,13 +361,13 @@ export default async function StudioPage({
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button formAction={runFeedbackAction} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20">
-                  Correr feedback
+                  Feedback
                 </button>
                 <button formAction={runSteelmanAction} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/20">
-                  Correr steelman
+                  Steelman
                 </button>
                 <button formAction={runEditorialAction} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-300/20">
-                  Correr editorial
+                  Editorial
                 </button>
                 <button className="rounded-full bg-cyan-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
                   Guardar artículo
@@ -427,7 +384,7 @@ export default async function StudioPage({
               <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
             </div>
             <div className="mt-6">
-              <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug} />
+              <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
             </div>
           </div>
 
@@ -444,7 +401,7 @@ export default async function StudioPage({
                 recentRuns.map((run) => (
                   <Link
                     key={run.id}
-                    href={buildStudioHref({ article: selectedArticle?.slug, run: run.id })}
+                    href={buildStudioHref({ article: selectedArticle?.slug ?? activeDraft.slug, run: run.id })}
                     className="block rounded-[1.4rem] border border-white/10 bg-black/20 p-4 transition hover:border-violet-300/20 hover:bg-white/[0.04]"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -461,96 +418,44 @@ export default async function StudioPage({
                   </Link>
                 ))
               ) : (
-                <p className="text-sm leading-7 text-slate-400">Todavía no hay corridas IA guardadas para este contexto.</p>
+                <p className="text-sm leading-7 text-slate-400">Todavía no hay corridas IA guardadas para este artículo.</p>
               )}
             </div>
           </div>
 
           <div className="glass-panel rounded-[2rem] p-8">
-            <div className="space-y-2">
-              <p className="section-eyebrow">Banco de ideas</p>
-              <h2 className="text-2xl font-semibold text-white">Sembrar siguiente tema</h2>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="section-eyebrow">Archivo editable</p>
+                <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
+              </div>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
             </div>
-
-            <form action={createIdeaAction} className="mt-6 space-y-4">
-              <Input label="Título" name="title" required />
-              <TextArea label="Ángulo" name="angle" rows={4} required />
-              <TextArea label="Por qué ahora" name="why_now" rows={3} required />
-              <TextArea label="Notas" name="notes" rows={4} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Artículo fuente (slug opcional)" name="source_article_slug" defaultValue={activeDraft.slug || undefined} />
-                <label className="block space-y-2">
-                  <span className="text-sm text-slate-300">Estado</span>
-                  <select name="status" defaultValue="seed" className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                    <option value="seed">seed</option>
-                    <option value="exploring">exploring</option>
-                    <option value="drafting">drafting</option>
-                    <option value="published">published</option>
-                    <option value="paused">paused</option>
-                  </select>
-                </label>
-              </div>
-              <button className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/20">
-                Guardar idea
-              </button>
-            </form>
-          </div>
-
-          <div className="glass-panel rounded-[2rem] p-8">
-            <h2 className="text-2xl font-semibold text-white">Estado actual</h2>
-            <div className="mt-6 space-y-4">
-              <div>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Artículos</p>
-                  <p className="text-xs text-slate-500">{articles.length} total</p>
-                </div>
-                <div className="mt-3 space-y-3">
-                  {articles.map((article) => (
-                    <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-medium text-white">{article.title}</p>
-                          <p className="text-sm text-slate-400">/{article.slug}</p>
-                        </div>
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                          {article.status}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
-                      <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                        <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
-                          Editar
-                        </Link>
-                        {article.status === "published" ? (
-                          <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
-                            Ver publicado
-                          </Link>
-                        ) : null}
-                      </div>
+            <div className="mt-6 space-y-3">
+              {articles.map((article) => (
+                <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-white">{article.title}</p>
+                      <p className="text-sm text-slate-400">/{article.slug}</p>
                     </div>
-                  ))}
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                      {article.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                    <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
+                      Editar
+                    </Link>
+                    {article.status === "published" ? (
+                      <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
+                        Ver publicado
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Ideas</p>
-                  <p className="text-xs text-slate-500">{ideas.length} total</p>
-                </div>
-                <div className="mt-3 space-y-3">
-                  {ideas.map((idea) => (
-                    <div key={idea.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="font-medium text-white">{idea.title}</p>
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                          {idea.status}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm leading-7 text-slate-400">{idea.angle}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
