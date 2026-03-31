@@ -8,6 +8,7 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { hasSupabaseAdminEnv } from "@/lib/supabase";
 import type { Article, ArticleAiRun, ArticleDraftInput } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { StudioActionBar } from "@/components/studio-action-bar";
 
 export const metadata = {
   title: "Studio",
@@ -132,6 +133,27 @@ function ErrorNotice({ code }: { code?: string }) {
   return <StudioNotice kind="warning">{message}</StudioNotice>;
 }
 
+function AnalysisCard({ title, items, tone = "neutral" }: { title: string; items: string[]; tone?: "neutral" | "danger" | "accent" }) {
+  const tones = {
+    neutral: "border-white/10 bg-black/20",
+    danger: "border-rose-300/15 bg-rose-300/5",
+    accent: "border-cyan-300/15 bg-cyan-300/5",
+  } as const;
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className={`rounded-[1.4rem] border p-4 ${tones[tone]}`}>
+      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{title}</p>
+      <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-200">
+        {items.map((item) => (
+          <li key={item} className="list-inside list-disc">{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: ArticleAiRun | null; selectedArticleSlug?: string | null }) {
   if (!selectedRun) {
     return (
@@ -145,7 +167,7 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
   const plainHref = buildStudioHref({ article: selectedArticleSlug, run: selectedRun.id });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="rounded-[1.6rem] border border-white/10 bg-black/25 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -178,27 +200,18 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {[
-          { label: "Preservar", items: selectedRun.output_payload.preserve },
-          { label: "Fortalezas", items: selectedRun.output_payload.strengths },
-          { label: "Tensiones", items: selectedRun.output_payload.tensions },
-          { label: "Siguiente paso", items: selectedRun.output_payload.action_items },
-        ].map((section) => (
-          <div key={section.label} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{section.label}</p>
-            <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-300">
-              {section.items.map((item) => (
-                <li key={item} className="list-inside list-disc">{item}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div className="grid gap-4 xl:grid-cols-2">
+        <AnalysisCard title="Preservar" items={selectedRun.output_payload.preserve} />
+        <AnalysisCard title="Fortalezas" items={selectedRun.output_payload.strengths} tone="accent" />
+        <AnalysisCard title="Tensiones" items={selectedRun.output_payload.tensions} />
+        <AnalysisCard title="Siguiente paso" items={selectedRun.output_payload.action_items} tone="accent" />
       </div>
 
       {selectedRun.output_payload.counterpoints.length > 0 ? (
-        <div className="rounded-[1.4rem] border border-rose-300/15 bg-rose-300/5 p-4">
-          <p className="text-xs uppercase tracking-[0.24em] text-rose-200/80">Presión crítica</p>
+        <details className="rounded-[1.4rem] border border-rose-300/15 bg-rose-300/5 p-4" open>
+          <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-rose-200/80">
+            Presión crítica
+          </summary>
           <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-200">
             {selectedRun.output_payload.counterpoints.map((item) => (
               <li key={item} className="list-inside list-disc">{item}</li>
@@ -207,7 +220,7 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
           {selectedRun.output_payload.confidence_note ? (
             <p className="mt-4 text-sm italic text-rose-100/80">{selectedRun.output_payload.confidence_note}</p>
           ) : null}
-        </div>
+        </details>
       ) : null}
     </div>
   );
@@ -218,8 +231,7 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
   const paragraphs = draft.body_md
     .split(/\n\s*\n/)
     .map((part) => part.replace(/^#+\s*/g, "").trim())
-    .filter(Boolean)
-    .slice(0, 7);
+    .filter(Boolean);
 
   return (
     <div className="glass-panel rounded-[2rem] p-8">
@@ -229,11 +241,19 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
       </div>
 
       <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-6 lg:p-8">
-        <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Preview vivo</p>
-        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white lg:text-4xl">{heading}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Preview vivo</p>
+            <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white lg:text-4xl">{heading}</h3>
+          </div>
+          <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+            {draft.status}
+          </span>
+        </div>
+
         {draft.voice_notes ? <p className="mt-4 text-sm italic leading-7 text-violet-100/75">Notas de voz: {draft.voice_notes}</p> : null}
 
-        <div className="mt-6 space-y-5 text-base leading-8 text-slate-300 lg:text-[1.05rem]">
+        <div className="mt-6 max-h-[72vh] space-y-5 overflow-y-auto pr-2 text-base leading-8 text-slate-300 lg:text-[1.05rem]">
           {paragraphs.length > 0 ? (
             paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
           ) : (
@@ -247,7 +267,7 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
 
 function DraftControls({ activeDraft, selectedRun }: { activeDraft: ArticleDraftInput; selectedRun: ArticleAiRun | null }) {
   return (
-    <details className="glass-panel group rounded-[2rem] p-6" open={false}>
+    <details className="glass-panel rounded-[2rem] p-6" open={false}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
         <div>
           <p className="section-eyebrow">Primer draft</p>
@@ -256,7 +276,7 @@ function DraftControls({ activeDraft, selectedRun }: { activeDraft: ArticleDraft
             Pega el draft, define límites de voz si hace falta y dispara corridas. Este bloque debería esconderse cuando ya estés comparando texto y feedback.
           </p>
         </div>
-        <span className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition group-open:bg-white/10">
+        <span className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white">
           Mostrar / ocultar input
         </span>
       </summary>
@@ -277,62 +297,36 @@ function DraftControls({ activeDraft, selectedRun }: { activeDraft: ArticleDraft
           <input type="hidden" name="title" defaultValue={activeDraft.title || undefined} />
           <input type="hidden" name="selected_run_id" defaultValue={selectedRun?.id ?? undefined} />
 
-          <TextArea label="Borrador" name="body_md" defaultValue={activeDraft.body_md} rows={10} placeholder="Pega aquí el primer draft crudo. Sin ceremonias." />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <TextArea label="Borrador" name="body_md" defaultValue={activeDraft.body_md} rows={10} placeholder="Pega aquí el primer draft crudo. Sin ceremonias." />
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-            <TextArea
-              label="Notas de voz / límites (opcional)"
-              name="voice_notes"
-              defaultValue={activeDraft.voice_notes}
-              rows={5}
-              placeholder="Ej: no me limpies demasiado, conserva mis tangentes si sostienen el argumento, no suenes corporate."
-            />
-            <label className="block space-y-2">
-              <span className="text-sm text-slate-300">Estado</span>
-              <select name="status" defaultValue={activeDraft.status} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </label>
-          </div>
+            <div className="space-y-5">
+              <TextArea
+                label="Notas de voz / límites (opcional)"
+                name="voice_notes"
+                defaultValue={activeDraft.voice_notes}
+                rows={6}
+                placeholder="Ej: no me limpies demasiado, conserva mis tangentes si sostienen el argumento, no suenes corporate."
+              />
 
-          <div className="rounded-[1.6rem] border border-violet-300/15 bg-violet-300/5 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-violet-200/80">Laboratorio editorial IA</p>
-                <h3 className="mt-2 text-xl font-semibold text-white">Tres cuchillos, dos intensidades</h3>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                  Default usa {resolveXaiModel("default")}. Heavy usa {resolveXaiModel("heavy")}. Feedback encuentra fallas, steelman construye el mejor ataque y editorial pule sin destruir la firma mental del texto.
-                </p>
-              </div>
               <label className="block space-y-2">
-                <span className="text-sm text-slate-300">Intensidad</span>
-                <select name="ai_intensity" defaultValue="default" className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                  <option value="default">default · {resolveXaiModel("default")}</option>
-                  <option value="heavy">heavy · {resolveXaiModel("heavy")}</option>
+                <span className="text-sm text-slate-300">Estado</span>
+                <select name="status" defaultValue={activeDraft.status} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
                 </select>
               </label>
             </div>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button formAction={runFeedbackAction} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20">
-                Feedback
-              </button>
-              <button formAction={runSteelmanAction} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/20">
-                Steelman
-              </button>
-              <button formAction={runEditorialAction} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-300/20">
-                Editorial
-              </button>
-              <button className="rounded-full bg-cyan-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
-                Guardar artículo
-              </button>
-            </div>
-
-            <p className="mt-4 text-xs leading-6 text-slate-500">
-              Título, slug, subtítulo, extracto, idioma, tags y SEO se infieren automáticamente del draft. Si tienes una corrida seleccionada a la derecha, el siguiente pase IA puede reutilizar ese contexto en cualquier orden.
-            </p>
           </div>
+
+          <StudioActionBar
+            feedbackAction={runFeedbackAction}
+            steelmanAction={runSteelmanAction}
+            editorialAction={runEditorialAction}
+            saveAction={upsertArticleAction}
+            defaultModel={resolveXaiModel("default")}
+            heavyModel={resolveXaiModel("heavy")}
+          />
         </form>
       </div>
     </details>
@@ -367,7 +361,7 @@ export default async function StudioPage({
           <p className="section-eyebrow">Panel editorial</p>
           <h1 className="text-4xl font-semibold tracking-tight text-white">Studio de Shallow Deepness</h1>
           <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            El draft input ya no debería competir visualmente con lo importante. Ahora queda escondible debajo del header y el foco principal pasa a ser comparación entre texto vivo y resultado editorial.
+            Esto ahora se comporta más como una mesa de revisión: el input queda escondible y el foco principal pasa a ser entender rápido el draft actual y lo que la IA te está diciendo sobre él.
           </p>
         </div>
         <form action={logoutAction}>
@@ -390,28 +384,30 @@ export default async function StudioPage({
       <ErrorNotice code={params.error} />
       {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(420px,0.95fr)] 2xl:grid-cols-[minmax(0,1.45fr)_minmax(480px,0.95fr)]">
         <DraftPreview draft={activeDraft} />
 
         <div className="space-y-8">
-          <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
+          <div className="glass-panel rounded-[2rem] p-8">
             <div className="space-y-2">
               <p className="section-eyebrow">Corrida seleccionada</p>
               <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
             </div>
-            <div className="mt-6">
+            <div className="mt-6 max-h-[72vh] overflow-y-auto pr-2">
               <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
             </div>
           </div>
 
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="section-eyebrow">Archivo editable</p>
-                <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
+          <details className="glass-panel rounded-[2rem] p-8">
+            <summary className="cursor-pointer list-none">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="section-eyebrow">Archivo editable</p>
+                  <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
+                </div>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
               </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
-            </div>
+            </summary>
             <div className="mt-6 space-y-3">
               {articles.map((article) => (
                 <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
@@ -438,7 +434,7 @@ export default async function StudioPage({
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>
