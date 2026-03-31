@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createIdeaAction, logoutAction, upsertArticleAction } from "@/app/studio/actions";
 import { getAllArticles, getIdeas } from "@/lib/articles";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { hasSupabaseServerEnv } from "@/lib/supabase";
+import { hasSupabaseAdminEnv } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = {
@@ -90,7 +90,7 @@ export default async function StudioPage({
   const latestDraft = articles.find((article) => article.status === "draft") ?? null;
   const selectedArticle =
     articles.find((article) => article.slug === params.article) ?? latestDraft ?? articles[0] ?? null;
-  const supabaseReady = hasSupabaseServerEnv();
+  const supabaseReady = hasSupabaseAdminEnv();
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-16">

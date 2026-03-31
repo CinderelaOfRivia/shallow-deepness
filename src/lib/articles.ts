@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { fallbackArticles, fallbackIdeas } from "@/lib/fallback-content";
-import { getSupabaseAdmin, hasSupabaseServerEnv } from "@/lib/supabase";
+import { getSupabaseAdmin, getSupabasePublic, hasSupabaseAdminEnv, hasSupabasePublicEnv } from "@/lib/supabase";
 import type { Article, Idea } from "@/lib/types";
 
 function sortArticles(items: Article[]) {
@@ -12,11 +12,11 @@ function sortArticles(items: Article[]) {
 }
 
 export const getPublishedArticles = cache(async (): Promise<Article[]> => {
-  if (!hasSupabaseServerEnv()) {
+  if (!hasSupabasePublicEnv()) {
     return sortArticles(fallbackArticles.filter((article) => article.status === "published"));
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabasePublic();
   const { data, error } = await supabase
     .from("articles")
     .select("*")
@@ -29,7 +29,7 @@ export const getPublishedArticles = cache(async (): Promise<Article[]> => {
 });
 
 export const getAllArticles = cache(async (): Promise<Article[]> => {
-  if (!hasSupabaseServerEnv()) {
+  if (!hasSupabaseAdminEnv()) {
     return sortArticles(fallbackArticles);
   }
 
@@ -44,11 +44,11 @@ export const getAllArticles = cache(async (): Promise<Article[]> => {
 });
 
 export const getArticleBySlug = cache(async (slug: string): Promise<Article | null> => {
-  if (!hasSupabaseServerEnv()) {
+  if (!hasSupabasePublicEnv()) {
     return fallbackArticles.find((article) => article.slug === slug) ?? null;
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabasePublic();
   const { data, error } = await supabase
     .from("articles")
     .select("*")
@@ -60,11 +60,11 @@ export const getArticleBySlug = cache(async (slug: string): Promise<Article | nu
 });
 
 export const getIdeas = cache(async (): Promise<Idea[]> => {
-  if (!hasSupabaseServerEnv()) {
+  if (!hasSupabasePublicEnv()) {
     return fallbackIdeas;
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabasePublic();
   const { data, error } = await supabase
     .from("idea_bank")
     .select("*")

@@ -67,4 +67,10 @@ on public.articles
 for select
 using (status = 'published');
 
+drop policy if exists "Public can read idea bank" on public.idea_bank;
+create policy "Public can read idea bank"
+on public.idea_bank
+for select
+using (true);
+
 -- The admin studio writes through server actions using the service role key.
