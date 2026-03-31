@@ -213,6 +213,38 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
   );
 }
 
+function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
+  const heading = draft.title || "Título inferido al guardar/publicar";
+  const paragraphs = draft.body_md
+    .split(/\n\s*\n/)
+    .map((part) => part.replace(/^#+\s*/g, "").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
+  return (
+    <div className="glass-panel rounded-[2rem] p-8">
+      <div className="space-y-2">
+        <p className="section-eyebrow">Vista actual del draft</p>
+        <h2 className="text-2xl font-semibold text-white">Estructura previa a publicar</h2>
+      </div>
+
+      <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-6">
+        <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Preview vivo</p>
+        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">{heading}</h3>
+        {draft.voice_notes ? <p className="mt-4 text-sm italic leading-7 text-violet-100/75">Notas de voz: {draft.voice_notes}</p> : null}
+
+        <div className="mt-6 space-y-4 text-sm leading-8 text-slate-300">
+          {paragraphs.length > 0 ? (
+            paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+          ) : (
+            <p className="text-slate-500">Pega un draft y aquí verás la estructura viva del texto mientras lo afilas.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function StudioPage({
   searchParams,
 }: {
@@ -236,7 +268,7 @@ export default async function StudioPage({
   const xaiReady = hasXaiEnv();
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-16">
+    <div className="mx-auto flex max-w-[96vw] flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16 2xl:max-w-[1800px]">
       <section className="glass-panel flex flex-wrap items-start justify-between gap-4 rounded-[2rem] p-8">
         <div className="space-y-3">
           <p className="section-eyebrow">Panel editorial</p>
@@ -263,7 +295,7 @@ export default async function StudioPage({
       <ErrorNotice code={params.error} />
       {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
-      <div className="grid gap-8 xl:grid-cols-[1.12fr_0.88fr]">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <section className="glass-panel space-y-6 rounded-[2rem] p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
@@ -360,13 +392,17 @@ export default async function StudioPage({
         </section>
 
         <section className="space-y-8">
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="space-y-2">
-              <p className="section-eyebrow">Corrida seleccionada</p>
-              <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
-            </div>
-            <div className="mt-6">
-              <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
+          <div className="grid gap-8 2xl:grid-cols-2">
+            <DraftPreview draft={activeDraft} />
+
+            <div className="glass-panel rounded-[2rem] p-8">
+              <div className="space-y-2">
+                <p className="section-eyebrow">Corrida seleccionada</p>
+                <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
+              </div>
+              <div className="mt-6">
+                <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
+              </div>
             </div>
           </div>
 
