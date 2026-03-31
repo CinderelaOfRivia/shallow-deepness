@@ -216,7 +216,7 @@ function AiRunDetails({ selectedRun, selectedArticleSlug }: { selectedRun: Artic
 export default async function StudioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ article?: string; saved?: string; run?: string; apply?: string; error?: string }>;
+  searchParams: Promise<{ article?: string; saved?: string; run?: string; apply?: string; error?: string; detail?: string }>;
 }) {
   const isAdmin = await isAdminAuthenticated();
   if (!isAdmin) redirect("/studio/login");
@@ -261,6 +261,7 @@ export default async function StudioPage({
       {params.saved === "editorial" ? <StudioNotice kind="success">Editorial corrido y guardado.</StudioNotice> : null}
 
       <ErrorNotice code={params.error} />
+      {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
       <div className="grid gap-8 xl:grid-cols-[1.12fr_0.88fr]">
         <section className="glass-panel space-y-6 rounded-[2rem] p-8">

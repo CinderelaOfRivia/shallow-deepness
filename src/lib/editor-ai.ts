@@ -3,8 +3,8 @@ import type { AiIntensity, AiWorkflow, ArticleAiOutput, ArticleDraftInput, Infer
 
 const XAI_API_URL = process.env.XAI_API_URL ?? "https://api.x.ai/v1/chat/completions";
 const XAI_API_KEY = process.env.XAI_API_KEY;
-const DEFAULT_MODEL = process.env.XAI_MODEL_DEFAULT ?? "grok-4.1-fast-reasoning";
-const HEAVY_MODEL = process.env.XAI_MODEL_HEAVY ?? "grok-4.2-reasoning";
+const DEFAULT_MODEL = process.env.XAI_MODEL_DEFAULT ?? "grok-4.20-0309-reasoning";
+const HEAVY_MODEL = process.env.XAI_MODEL_HEAVY ?? "grok-4.20-0309-reasoning";
 
 const aiOutputSchema = z.object({
   headline: z.string().min(1).max(160),

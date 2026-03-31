@@ -91,6 +91,7 @@ function buildStudioHref(params: {
   run?: string | null;
   apply?: string | null;
   error?: string | null;
+  detail?: string | null;
 }) {
   const search = new URLSearchParams();
 
@@ -99,6 +100,7 @@ function buildStudioHref(params: {
   if (params.run) search.set("run", params.run);
   if (params.apply) search.set("apply", params.apply);
   if (params.error) search.set("error", params.error);
+  if (params.detail) search.set("detail", params.detail.slice(0, 180));
 
   const query = search.toString();
   return query ? `/studio?${query}` : "/studio";
@@ -211,7 +213,7 @@ async function runAiAction(workflow: AiWorkflow, formData: FormData) {
         ? "supabase-missing"
         : "ai-failed";
 
-    redirect(buildStudioHref({ article: draft.slug || null, error: normalized }));
+    redirect(buildStudioHref({ article: draft.slug || null, error: normalized, detail: message }));
   }
 
   revalidatePath("/studio");
