@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction, runEditorialAction, runFeedbackAction, runSteelmanAction, upsertArticleAction } from "@/app/studio/actions";
-import { getAiRunById, getRecentAiRuns } from "@/lib/ai-runs";
+import { getAiRunById } from "@/lib/ai-runs";
 import { getAllArticles } from "@/lib/articles";
 import { hasXaiEnv, resolveXaiModel } from "@/lib/editor-ai";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -357,7 +357,6 @@ export default async function StudioPage({
   const latestDraft = articles.find((article) => article.status === "draft") ?? null;
   const baseDraft = selectedArticle ? articleToDraft(selectedArticle) : latestDraft ? articleToDraft(latestDraft) : emptyDraft();
   const activeDraft = mergeDraftWithSuggestion(baseDraft, selectedRun, params.apply === "1");
-  const recentRuns = await getRecentAiRuns(selectedArticle?.id ?? null, 8);
   const supabaseReady = hasSupabaseAdminEnv();
   const xaiReady = hasXaiEnv();
 
@@ -402,41 +401,6 @@ export default async function StudioPage({
             </div>
             <div className="mt-6">
               <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="section-eyebrow">Historial</p>
-                <h2 className="text-2xl font-semibold text-white">Últimas corridas IA</h2>
-              </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{recentRuns.length} visibles</p>
-            </div>
-            <div className="mt-6 space-y-3">
-              {recentRuns.length > 0 ? (
-                recentRuns.map((run) => (
-                  <Link
-                    key={run.id}
-                    href={buildStudioHref({ article: selectedArticle?.slug ?? activeDraft.slug, run: run.id })}
-                    className="block rounded-[1.4rem] border border-white/10 bg-black/20 p-4 transition hover:border-violet-300/20 hover:bg-white/[0.04]"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{run.workflow}</p>
-                        <p className="mt-2 font-medium text-white">{run.output_payload.headline}</p>
-                        <p className="mt-2 line-clamp-2 text-sm leading-7 text-slate-400">{run.output_payload.summary}</p>
-                      </div>
-                      <div className="text-right text-xs uppercase tracking-[0.18em] text-slate-500">
-                        <p>{run.intensity}</p>
-                        <p className="mt-1">{formatDate(run.created_at)}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-sm leading-7 text-slate-400">Todavía no hay corridas IA guardadas para este artículo.</p>
-              )}
             </div>
           </div>
 
