@@ -219,7 +219,7 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
     .split(/\n\s*\n/)
     .map((part) => part.replace(/^#+\s*/g, "").trim())
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, 7);
 
   return (
     <div className="glass-panel rounded-[2rem] p-8">
@@ -228,12 +228,12 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
         <h2 className="text-2xl font-semibold text-white">Estructura previa a publicar</h2>
       </div>
 
-      <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-6">
+      <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-6 lg:p-8">
         <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Preview vivo</p>
-        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">{heading}</h3>
+        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white lg:text-4xl">{heading}</h3>
         {draft.voice_notes ? <p className="mt-4 text-sm italic leading-7 text-violet-100/75">Notas de voz: {draft.voice_notes}</p> : null}
 
-        <div className="mt-6 space-y-4 text-sm leading-8 text-slate-300">
+        <div className="mt-6 space-y-5 text-base leading-8 text-slate-300 lg:text-[1.05rem]">
           {paragraphs.length > 0 ? (
             paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
           ) : (
@@ -242,6 +242,100 @@ function DraftPreview({ draft }: { draft: ArticleDraftInput }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function DraftControls({ activeDraft, selectedRun }: { activeDraft: ArticleDraftInput; selectedRun: ArticleAiRun | null }) {
+  return (
+    <details className="glass-panel group rounded-[2rem] p-6" open={false}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+        <div>
+          <p className="section-eyebrow">Primer draft</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Input mínimo</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
+            Pega el draft, define límites de voz si hace falta y dispara corridas. Este bloque debería esconderse cuando ya estés comparando texto y feedback.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition group-open:bg-white/10">
+          Mostrar / ocultar input
+        </span>
+      </summary>
+
+      <div className="mt-6 border-t border-white/10 pt-6">
+        <form action={upsertArticleAction} className="space-y-5">
+          <input type="hidden" name="id" defaultValue={activeDraft.id ?? undefined} />
+          <input type="hidden" name="slug" defaultValue={activeDraft.slug || undefined} />
+          <input type="hidden" name="subtitle" defaultValue={activeDraft.subtitle ?? undefined} />
+          <input type="hidden" name="excerpt" defaultValue={activeDraft.excerpt || undefined} />
+          <input type="hidden" name="language" defaultValue={activeDraft.language} />
+          <input type="hidden" name="cover_image_url" defaultValue={activeDraft.cover_image_url ?? undefined} />
+          <input type="hidden" name="tags" defaultValue={activeDraft.tags.join(", ") || undefined} />
+          <input type="hidden" name="featured" defaultValue={activeDraft.featured ? "on" : ""} />
+          <input type="hidden" name="published_at" defaultValue={activeDraft.published_at ?? undefined} />
+          <input type="hidden" name="seo_title" defaultValue={activeDraft.seo_title ?? undefined} />
+          <input type="hidden" name="seo_description" defaultValue={activeDraft.seo_description ?? undefined} />
+          <input type="hidden" name="title" defaultValue={activeDraft.title || undefined} />
+          <input type="hidden" name="selected_run_id" defaultValue={selectedRun?.id ?? undefined} />
+
+          <TextArea label="Borrador" name="body_md" defaultValue={activeDraft.body_md} rows={10} placeholder="Pega aquí el primer draft crudo. Sin ceremonias." />
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+            <TextArea
+              label="Notas de voz / límites (opcional)"
+              name="voice_notes"
+              defaultValue={activeDraft.voice_notes}
+              rows={5}
+              placeholder="Ej: no me limpies demasiado, conserva mis tangentes si sostienen el argumento, no suenes corporate."
+            />
+            <label className="block space-y-2">
+              <span className="text-sm text-slate-300">Estado</span>
+              <select name="status" defaultValue={activeDraft.status} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-violet-300/15 bg-violet-300/5 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-violet-200/80">Laboratorio editorial IA</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">Tres cuchillos, dos intensidades</h3>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
+                  Default usa {resolveXaiModel("default")}. Heavy usa {resolveXaiModel("heavy")}. Feedback encuentra fallas, steelman construye el mejor ataque y editorial pule sin destruir la firma mental del texto.
+                </p>
+              </div>
+              <label className="block space-y-2">
+                <span className="text-sm text-slate-300">Intensidad</span>
+                <select name="ai_intensity" defaultValue="default" className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
+                  <option value="default">default · {resolveXaiModel("default")}</option>
+                  <option value="heavy">heavy · {resolveXaiModel("heavy")}</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button formAction={runFeedbackAction} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20">
+                Feedback
+              </button>
+              <button formAction={runSteelmanAction} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/20">
+                Steelman
+              </button>
+              <button formAction={runEditorialAction} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-300/20">
+                Editorial
+              </button>
+              <button className="rounded-full bg-cyan-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
+                Guardar artículo
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs leading-6 text-slate-500">
+              Título, slug, subtítulo, extracto, idioma, tags y SEO se infieren automáticamente del draft. Si tienes una corrida seleccionada a la derecha, el siguiente pase IA puede reutilizar ese contexto en cualquier orden.
+            </p>
+          </div>
+        </form>
+      </div>
+    </details>
   );
 }
 
@@ -274,7 +368,7 @@ export default async function StudioPage({
           <p className="section-eyebrow">Panel editorial</p>
           <h1 className="text-4xl font-semibold tracking-tight text-white">Studio de Shallow Deepness</h1>
           <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            La experiencia ahora es más simple: pega el draft, opcionalmente ajusta el título, agrega límites de voz si hace falta y corre feedback, steelman o editorial. El resto lo extrae el motor y tú decides qué aceptar.
+            El draft input ya no debería competir visualmente con lo importante. Ahora queda escondible debajo del header y el foco principal pasa a ser comparación entre texto vivo y resultado editorial.
           </p>
         </div>
         <form action={logoutAction}>
@@ -283,6 +377,8 @@ export default async function StudioPage({
           </button>
         </form>
       </section>
+
+      <DraftControls activeDraft={activeDraft} selectedRun={selectedRun} />
 
       {!supabaseReady ? <StudioNotice kind="warning">Supabase admin no está configurado todavía.</StudioNotice> : null}
       {!xaiReady ? <StudioNotice kind="warning">XAI_API_KEY todavía no existe en el entorno. El lab editorial sigue apagado hasta que pongas la llave.</StudioNotice> : null}
@@ -295,118 +391,22 @@ export default async function StudioPage({
       <ErrorNotice code={params.error} />
       {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(320px,0.62fr)_minmax(0,1.18fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(340px,0.58fr)_minmax(0,1.28fr)_minmax(0,1fr)]">
-        <section className="glass-panel h-fit space-y-6 rounded-[2rem] p-6 xl:sticky xl:top-24">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <DraftPreview draft={activeDraft} />
+
+        <div className="space-y-8">
+          <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
             <div className="space-y-2">
-              <p className="section-eyebrow">Draft-first</p>
-              <h2 className="text-2xl font-semibold text-white">Input mínimo</h2>
-              <p className="max-w-2xl text-sm leading-7 text-slate-400">
-                Este panel solo existe para pegar el draft, poner límites de voz y disparar corridas. El centro y la derecha son donde realmente comparas estructura y feedback.
-              </p>
+              <p className="section-eyebrow">Corrida seleccionada</p>
+              <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
             </div>
-            <Link href="/studio" className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-              Nuevo draft
-            </Link>
+            <div className="mt-6">
+              <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
+            </div>
           </div>
 
-          <form action={upsertArticleAction} className="space-y-5">
-            <input type="hidden" name="id" defaultValue={activeDraft.id ?? undefined} />
-            <input type="hidden" name="slug" defaultValue={activeDraft.slug || undefined} />
-            <input type="hidden" name="subtitle" defaultValue={activeDraft.subtitle ?? undefined} />
-            <input type="hidden" name="excerpt" defaultValue={activeDraft.excerpt || undefined} />
-            <input type="hidden" name="language" defaultValue={activeDraft.language} />
-            <input type="hidden" name="cover_image_url" defaultValue={activeDraft.cover_image_url ?? undefined} />
-            <input type="hidden" name="tags" defaultValue={activeDraft.tags.join(", ") || undefined} />
-            <input type="hidden" name="featured" defaultValue={activeDraft.featured ? "on" : ""} />
-            <input type="hidden" name="published_at" defaultValue={activeDraft.published_at ?? undefined} />
-            <input type="hidden" name="seo_title" defaultValue={activeDraft.seo_title ?? undefined} />
-            <input type="hidden" name="seo_description" defaultValue={activeDraft.seo_description ?? undefined} />
-
-            <input type="hidden" name="title" defaultValue={activeDraft.title || undefined} />
-            <input type="hidden" name="selected_run_id" defaultValue={selectedRun?.id ?? undefined} />
-
-            <TextArea
-              label="Borrador"
-              name="body_md"
-              defaultValue={activeDraft.body_md}
-              rows={12}
-              placeholder="Pega aquí el primer draft crudo. Sin ceremonias."
-            />
-
-            <div className="grid gap-4 md:grid-cols-[0.7fr_0.3fr]">
-              <TextArea
-                label="Notas de voz / límites (opcional)"
-                name="voice_notes"
-                defaultValue={activeDraft.voice_notes}
-                rows={6}
-                placeholder="Ej: no me limpies demasiado, conserva mis tangentes si sostienen el argumento, no suenes corporate."
-              />
-              <label className="block space-y-2">
-                <span className="text-sm text-slate-300">Estado</span>
-                <select name="status" defaultValue={activeDraft.status} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="rounded-[1.6rem] border border-violet-300/15 bg-violet-300/5 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-violet-200/80">Laboratorio editorial IA</p>
-                  <h3 className="mt-2 text-xl font-semibold text-white">Tres cuchillos, dos intensidades</h3>
-                  <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                    Default usa {resolveXaiModel("default")}. Heavy usa {resolveXaiModel("heavy")}. Feedback encuentra fallas, steelman construye el mejor ataque y editorial pule sin destruir la firma mental del texto.
-                  </p>
-                </div>
-                <label className="block space-y-2">
-                  <span className="text-sm text-slate-300">Intensidad</span>
-                  <select name="ai_intensity" defaultValue="default" className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none">
-                    <option value="default">default · {resolveXaiModel("default")}</option>
-                    <option value="heavy">heavy · {resolveXaiModel("heavy")}</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button formAction={runFeedbackAction} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20">
-                  Feedback
-                </button>
-                <button formAction={runSteelmanAction} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/20">
-                  Steelman
-                </button>
-                <button formAction={runEditorialAction} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-300/20">
-                  Editorial
-                </button>
-                <button className="rounded-full bg-cyan-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
-                  Guardar artículo
-                </button>
-              </div>
-
-              <p className="mt-4 text-xs leading-6 text-slate-500">
-                Título, slug, subtítulo, extracto, idioma, tags y SEO se infieren automáticamente del draft. Si tienes una corrida seleccionada a la derecha, el siguiente pase IA puede reutilizar ese contexto en cualquier orden.
-              </p>
-            </div>
-          </form>
-        </section>
-
-        <section className="xl:col-span-2 grid gap-8 xl:grid-cols-[minmax(0,1.18fr)_minmax(0,1fr)] xl:items-start">
-          <DraftPreview draft={activeDraft} />
-
-          <div className="space-y-8">
-            <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
-              <div className="space-y-2">
-                <p className="section-eyebrow">Corrida seleccionada</p>
-                <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
-              </div>
-              <div className="mt-6">
-                <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} />
-              </div>
-            </div>
-
-            <div className="glass-panel rounded-[2rem] p-8">
-              <div className="flex items-center justify-between gap-4">
+          <div className="glass-panel rounded-[2rem] p-8">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="section-eyebrow">Historial</p>
                 <h2 className="text-2xl font-semibold text-white">Últimas corridas IA</h2>
@@ -440,43 +440,42 @@ export default async function StudioPage({
             </div>
           </div>
 
-            <div className="glass-panel rounded-[2rem] p-8">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="section-eyebrow">Archivo editable</p>
-                  <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
-                </div>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
+          <div className="glass-panel rounded-[2rem] p-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="section-eyebrow">Archivo editable</p>
+                <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
               </div>
-              <div className="mt-6 space-y-3">
-                {articles.map((article) => (
-                  <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-white">{article.title}</p>
-                        <p className="text-sm text-slate-400">/{article.slug}</p>
-                      </div>
-                      <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                        {article.status}
-                      </span>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
+            </div>
+            <div className="mt-6 space-y-3">
+              {articles.map((article) => (
+                <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-white">{article.title}</p>
+                      <p className="text-sm text-slate-400">/{article.slug}</p>
                     </div>
-                    <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
-                    <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                      <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
-                        Editar
-                      </Link>
-                      {article.status === "published" ? (
-                        <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
-                          Ver publicado
-                        </Link>
-                      ) : null}
-                    </div>
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                      {article.status}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                    <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
+                      Editar
+                    </Link>
+                    {article.status === "published" ? (
+                      <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
+                        Ver publicado
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );
