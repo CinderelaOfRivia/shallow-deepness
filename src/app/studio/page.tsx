@@ -572,109 +572,108 @@ export default async function StudioPage({
       {params.detail ? <StudioNotice kind="warning">Detalle técnico: {params.detail}</StudioNotice> : null}
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.3fr)_minmax(460px,0.95fr)] 2xl:grid-cols-[minmax(0,1.38fr)_minmax(500px,0.92fr)]">
-        <div className="space-y-8">
-          <DraftPreview draft={activeDraft} />
-          <EditorChatPanel draft={activeDraft} selectedRun={selectedRun} messages={messages} />
-        </div>
+        <DraftPreview draft={activeDraft} />
 
-        <div className="space-y-8">
-          <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
-            <div className="space-y-2">
-              <p className="section-eyebrow">Corrida seleccionada</p>
-              <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
-            </div>
-            <div className="mt-6 max-h-[72vh] overflow-y-auto pr-2">
-              <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} draft={activeDraft} />
-            </div>
+        <div className="glass-panel rounded-[2rem] p-8 xl:sticky xl:top-24">
+          <div className="space-y-2">
+            <p className="section-eyebrow">Corrida seleccionada</p>
+            <h2 className="text-2xl font-semibold text-white">Resultado editorial</h2>
           </div>
-
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="section-eyebrow">Pases guardados</p>
-                <h2 className="text-2xl font-semibold text-white">Feedback / steelman / editorial</h2>
-              </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{runs.length} total</p>
-            </div>
-            <div className="mt-6 space-y-3">
-              {runs.length > 0 ? (
-                runs.map((run) => (
-                  <Link
-                    key={run.id}
-                    href={buildStudioHref({ article: selectedArticle?.slug ?? activeDraft.slug, version: params.version ?? null, run: run.id })}
-                    className={`block rounded-[1.4rem] border p-4 transition ${selectedRun?.id === run.id ? "border-cyan-300/30 bg-cyan-300/10" : "border-white/10 bg-black/20 hover:border-violet-300/20 hover:bg-white/[0.04]"}`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{run.workflow}</p>
-                        <p className="mt-2 font-medium text-white">{run.output_payload.headline}</p>
-                        <p className="mt-2 line-clamp-2 text-sm leading-7 text-slate-400">{run.output_payload.summary}</p>
-                      </div>
-                      <div className="text-right text-xs uppercase tracking-[0.18em] text-slate-500">
-                        <p>{run.intensity}</p>
-                        <p className="mt-1">{formatDate(run.created_at)}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-sm leading-7 text-slate-400">Todavía no hay corridas IA guardadas para este draft.</p>
-              )}
-            </div>
+          <div className="mt-6 max-h-[72vh] overflow-y-auto pr-2">
+            <AiRunDetails selectedRun={selectedRun} selectedArticleSlug={selectedArticle?.slug ?? activeDraft.slug} draft={activeDraft} />
           </div>
-
-          <div className="glass-panel rounded-[2rem] p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="section-eyebrow">Versiones del draft</p>
-                <h2 className="text-2xl font-semibold text-white">Línea de tiempo</h2>
-              </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{versions.length} total</p>
-            </div>
-            <div className="mt-6">
-              <VersionTimeline versions={versions} articleSlug={selectedArticle?.slug ?? activeDraft.slug} currentVersionId={params.version ?? null} />
-            </div>
-          </div>
-
-          <details className="glass-panel rounded-[2rem] p-8">
-            <summary className="cursor-pointer list-none">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="section-eyebrow">Archivo editable</p>
-                  <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
-                </div>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
-              </div>
-            </summary>
-            <div className="mt-6 space-y-3">
-              {articles.map((article) => (
-                <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-medium text-white">{article.title}</p>
-                      <p className="text-sm text-slate-400">/{article.slug}</p>
-                    </div>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                      {article.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
-                      Editar
-                    </Link>
-                    {article.status === "published" ? (
-                      <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
-                        Ver publicado
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
         </div>
       </div>
+
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="glass-panel rounded-[2rem] p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="section-eyebrow">Pases guardados</p>
+              <h2 className="text-2xl font-semibold text-white">Feedback / steelman / editorial</h2>
+            </div>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{runs.length} total</p>
+          </div>
+          <div className="mt-6 space-y-3">
+            {runs.length > 0 ? (
+              runs.map((run) => (
+                <Link
+                  key={run.id}
+                  href={buildStudioHref({ article: selectedArticle?.slug ?? activeDraft.slug, version: params.version ?? null, run: run.id })}
+                  className={`block rounded-[1.4rem] border p-4 transition ${selectedRun?.id === run.id ? "border-cyan-300/30 bg-cyan-300/10" : "border-white/10 bg-black/20 hover:border-violet-300/20 hover:bg-white/[0.04]"}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{run.workflow}</p>
+                      <p className="mt-2 font-medium text-white">{run.output_payload.headline}</p>
+                      <p className="mt-2 line-clamp-2 text-sm leading-7 text-slate-400">{run.output_payload.summary}</p>
+                    </div>
+                    <div className="text-right text-xs uppercase tracking-[0.18em] text-slate-500">
+                      <p>{run.intensity}</p>
+                      <p className="mt-1">{formatDate(run.created_at)}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-7 text-slate-400">Todavía no hay corridas IA guardadas para este draft.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[2rem] p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="section-eyebrow">Versiones del draft</p>
+              <h2 className="text-2xl font-semibold text-white">Línea de tiempo</h2>
+            </div>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{versions.length} total</p>
+          </div>
+          <div className="mt-6">
+            <VersionTimeline versions={versions} articleSlug={selectedArticle?.slug ?? activeDraft.slug} currentVersionId={params.version ?? null} />
+          </div>
+        </div>
+      </div>
+
+      <EditorChatPanel draft={activeDraft} selectedRun={selectedRun} messages={messages} />
+
+      <details className="glass-panel rounded-[2rem] p-8">
+        <summary className="cursor-pointer list-none">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="section-eyebrow">Archivo editable</p>
+              <h2 className="text-2xl font-semibold text-white">Artículos existentes</h2>
+            </div>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{articles.length} total</p>
+          </div>
+        </summary>
+        <div className="mt-6 space-y-3">
+          {articles.map((article) => (
+            <div key={article.id} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-medium text-white">{article.title}</p>
+                  <p className="text-sm text-slate-400">/{article.slug}</p>
+                </div>
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                  {article.status}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-slate-400">Actualizado {formatDate(article.updated_at)}</p>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                <Link href={`/studio?article=${article.slug}`} className="text-cyan-200 transition hover:text-cyan-100">
+                  Editar
+                </Link>
+                {article.status === "published" ? (
+                  <Link href={`/articulos/${article.slug}`} className="text-slate-300 transition hover:text-white">
+                    Ver publicado
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
